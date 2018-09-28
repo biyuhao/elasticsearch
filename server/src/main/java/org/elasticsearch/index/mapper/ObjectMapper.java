@@ -59,7 +59,8 @@ public class ObjectMapper extends Mapper implements Cloneable {
     public enum Dynamic {
         TRUE,
         FALSE,
-        STRICT
+        STRICT,
+        MATCHED
     }
 
     public static class Nested {
@@ -178,6 +179,8 @@ public class ObjectMapper extends Mapper implements Cloneable {
                 String value = fieldNode.toString();
                 if (value.equalsIgnoreCase("strict")) {
                     builder.dynamic(Dynamic.STRICT);
+                } else if(value.equalsIgnoreCase("matched")) {
+                    builder.dynamic(Dynamic.MATCHED);
                 } else {
                     boolean dynamic = XContentMapValues.nodeBooleanValue(fieldNode, fieldName + ".dynamic");
                     builder.dynamic(dynamic ? Dynamic.TRUE : Dynamic.FALSE);

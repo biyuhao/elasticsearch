@@ -133,6 +133,28 @@ public class DynamicMappingTests extends ESSingleNodeTestCase {
         assertThat(e.getMessage(), equalTo("mapping set to strict, dynamic introduction of [field2] within [type] is not allowed"));
     }
 
+    public void testDynamicMatched() throws IOException {
+        String mapping = Strings.toString(jsonBuilder().startObject().startObject("type")
+            .field("dynamic", "matched")
+            .startObject("properties")
+            .startObject("field1").field("type", "text").endObject()
+            .endObject()
+            .endObject().endObject());
+
+        DocumentMapper defaultMapper = createIndex("test").mapperService().documentMapperParser().parse("type", new CompressedXContent(mapping));
+
+        ParsedDocument doc = defaultMapper.parse(SourceToParse.source("test", "type", "1", BytesReference
+                .bytes(jsonBuilder()
+                    .startObject()
+                    .field("field1", "value1")
+                    .field("field2", "value2")
+                    .endObject()),
+            XContentType.JSON));
+
+        assertThat(doc.rootDoc().get("field1"), equalTo("value1"));
+        assertThat(doc.rootDoc().get("field2"), equalTo("value2"));
+    }
+
     public void testDynamicFalseWithInnerObjectButDynamicSetOnRoot() throws IOException {
         String mapping = Strings.toString(jsonBuilder().startObject().startObject("type")
                 .field("dynamic", "false")

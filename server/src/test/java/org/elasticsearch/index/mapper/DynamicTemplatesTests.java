@@ -35,6 +35,7 @@ import static org.elasticsearch.test.StreamsUtils.copyToBytesFromClasspath;
 import static org.elasticsearch.test.StreamsUtils.copyToStringFromClasspath;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 
 public class DynamicTemplatesTests extends ESSingleNodeTestCase {
     public void testMatchTypeOnly() throws Exception {
@@ -62,6 +63,32 @@ public class DynamicTemplatesTests extends ESSingleNodeTestCase {
         assertNotSame(IndexOptions.NONE, mapperService.fullName("l").indexOptions());
 
 
+    }
+
+    public void testWithMatchedOnlyDynamicMapping() throws Exception {
+        XContentBuilder builder = JsonXContent.contentBuilder();
+        builder.startObject().startObject("person")
+            .field("dynamic", "matched")
+            .startArray("dynamic_templates").startObject().startObject("test")
+            .field("match_mapping_type", "string")
+            .startObject("mapping").field("index", false).endObject()
+            .endObject().endObject().endArray().endObject().endObject();
+        IndexService index = createIndex("test");
+        client().admin().indices().preparePutMapping("test").setType("person").setSource(builder).get();
+
+        MapperService mapperService = index.mapperService();
+        DocumentMapper docMapper = mapperService.documentMapper("person");
+        builder = JsonXContent.contentBuilder();
+        builder.startObject().field("s", "hello").field("l", 1).endObject();
+        ParsedDocument parsedDoc = docMapper.parse(SourceToParse.source("test", "person", "1", BytesReference.bytes(builder),
+            XContentType.JSON));
+        client().admin().indices().preparePutMapping("test").setType("person")
+            .setSource(parsedDoc.dynamicMappingsUpdate().toString(), XContentType.JSON).get();
+
+        assertThat(mapperService.fullName("s"), notNullValue());
+        assertEquals(IndexOptions.NONE, mapperService.fullName("s").indexOptions());
+
+        assertThat(mapperService.fullName("l"), nullValue());
     }
 
     public void testSimple() throws Exception {
